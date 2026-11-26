@@ -18,6 +18,14 @@ import type { SocketStatus } from "../lib/socket"
 export const Route = createFileRoute("/c/$room")({
   component: ControllerPage,
   ssr: false,
+  // A room's controller is private to the people playing: keep it out of
+  // search results.
+  head: () => ({
+    meta: [
+      { title: "Canyon Run – Controller" },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
 })
 
 const PID_KEY = "canyon-run:pid"

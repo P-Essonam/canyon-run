@@ -22,6 +22,8 @@ pnpm wrangler d1 create canyon-run   # add the printed database_id to wrangler.j
 pnpm deploy
 ```
 
+On your own domain, set `SITE_URL` in `src/shared/site.ts`: the canonical link and the share card point to it.
+
 ## Run it locally
 
 ```sh
