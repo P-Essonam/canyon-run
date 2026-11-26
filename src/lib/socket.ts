@@ -26,6 +26,18 @@ export class RoomSocket<In, Out> {
     }
   }
 
+  // For a stream where only the latest value matters (tilt): sends only
+  // when everything sent before has left the phone. On a slow network,
+  // queued readings would arrive late, one after the other, and the rocket
+  // would lag behind the hand more and more. Returns whether it sent.
+  sendLatest(message: Out) {
+    if (this.ws?.readyState !== WebSocket.OPEN || this.ws.bufferedAmount > 0) {
+      return false
+    }
+    this.ws.send(JSON.stringify(message))
+    return true
+  }
+
   close() {
     this.stopped = true
     if (this.timer) clearTimeout(this.timer)

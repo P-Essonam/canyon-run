@@ -6,7 +6,7 @@ export const ROOM_PATTERN = /^[a-z0-9]{4,12}$/
 export const NAME_MAX = 12
 
 // Tilt is sent about 30 times a second while flying.
-export const TILT_INTERVAL_MS = 33
+export const TILT_INTERVAL_MS = 16
 // A phone gone longer than this during a game counts as quit.
 export const DISCONNECT_GRACE_MS = 5000
 // No sensor reading this soon after "Ready": the phone steers by drag.

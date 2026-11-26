@@ -278,8 +278,9 @@ export class Game {
   }
 
   private steer(player: Player, dt: number, parked: boolean, speed = 24) {
-    // Quick to follow the phone, so steering feels direct.
-    const ease = 1 - Math.exp(-dt * 18)
+    // Quick to follow the phone, so steering feels direct: just enough
+    // smoothing to hide the gaps between network messages.
+    const ease = 1 - Math.exp(-dt * 30)
     player.r += (player.targetR - player.r) * ease
     player.p += (player.targetP - player.p) * ease
     if (parked) {
@@ -413,7 +414,7 @@ export class Game {
       for (const p of list) target.add(new THREE.Vector3(p.x, p.y, -this.d))
       target.divideScalar(list.length)
     }
-    this.focus.lerp(target, 1 - Math.exp(-dt * 6))
+    this.focus.lerp(target, 1 - Math.exp(-dt * 10))
     const behind = this.phase === "lobby" ? 0 : 11
     const desired = new THREE.Vector3(
       this.focus.x * 0.85 + this.canyon.centerX(this.d - behind) * 0.15,
@@ -735,7 +736,7 @@ class Rocket {
 
   place(x: number, y: number, z: number, r: number, p: number) {
     this.group.position.set(x, y, z)
-    this.group.rotation.set(p * 0.35, 0, -r * 0.75)
+    this.group.rotation.set(p * 0.4, 0, -r * 0.9)
   }
 
   update(dt: number, burning: boolean) {

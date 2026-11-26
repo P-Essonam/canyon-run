@@ -212,6 +212,11 @@ function Controller({ room }: { room: string }) {
   // Send tilt while my rocket is up.
   useEffect(() => {
     if (!flying) return
+    // Only what changed, plus a reminder now and then, so the network
+    // carries little and never queues up.
+    let lastR = NaN
+    let lastP = NaN
+    let lastSent = 0
     const timer = setInterval(() => {
       let r = 0
       let p = 0
@@ -224,7 +229,13 @@ function Controller({ room }: { room: string }) {
       }
       r = shape(r)
       p = shape(p)
-      socket.current?.send({ t: "tilt", r, p })
+      const now = performance.now()
+      const moved = Math.abs(r - lastR) > 0.005 || Math.abs(p - lastP) > 0.005
+      if ((moved || now - lastSent > 250) && socket.current?.sendLatest({ t: "tilt", r, p })) {
+        lastR = r
+        lastP = p
+        lastSent = now
+      }
       if (dot.current) {
         dot.current.style.transform = `translate(${r * 70}px, ${-p * 70}px)`
       }
