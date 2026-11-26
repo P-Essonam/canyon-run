@@ -12,9 +12,10 @@ export const DISCONNECT_GRACE_MS = 5000
 // No sensor reading this soon after "Ready": the phone steers by drag.
 export const SENSOR_TIMEOUT_MS = 700
 
-// The rocket never goes faster than this (m/s): the room uses it to reject
-// a distance no real game could reach.
-export const MAX_SPEED = 70
+// The rocket never goes faster than this (m/s). The game flies up to it
+// (see speedAt) and the room uses it to reject a distance no real game
+// could reach, so both always agree.
+export const MAX_SPEED = 85
 
 export type Phase = "lobby" | "countdown" | "flying" | "over"
 

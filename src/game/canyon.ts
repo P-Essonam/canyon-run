@@ -3,6 +3,9 @@
 // flies toward -z, so world z = -d. Seeded, so each game gets its own
 // canyon while rendering and collisions agree.
 
+import { MAX_SPEED } from "../shared/protocol"
+
+export { MAX_SPEED }
 export const WALL_HEIGHT = 46
 export const CEILING = 28
 export const FLOOR = 0.6
@@ -194,7 +197,6 @@ export class Canyon {
 
 // The rocket's speed (m/s) after `t` seconds of flight: fast from the
 // start, steady for five seconds, then faster and faster, up to MAX_SPEED.
-export const MAX_SPEED = 85
 export function speedAt(t: number) {
   if (t < 5) return 55
   return Math.min(MAX_SPEED, 55 + (t - 5) * 1.3)
