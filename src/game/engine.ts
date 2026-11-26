@@ -276,7 +276,8 @@ export class Game {
   }
 
   private steer(player: Player, dt: number, parked: boolean, speed = 24) {
-    const ease = 1 - Math.exp(-dt * 10)
+    // Quick to follow the phone, so steering feels direct.
+    const ease = 1 - Math.exp(-dt * 18)
     player.r += (player.targetR - player.r) * ease
     player.p += (player.targetP - player.p) * ease
     if (parked) {
@@ -284,8 +285,9 @@ export class Game {
       return
     }
     const lateral = 16 * (0.85 + (speed / 70) * 0.5)
-    player.x += player.r * lateral * dt
-    player.y = Math.min(CEILING, player.y + player.p * 10 * dt)
+    player.x = this.canyon.clampX(this.d, player.x + player.r * lateral * dt)
+    // Up and down as quick as left and right.
+    player.y = Math.min(CEILING, player.y + player.p * lateral * 0.9 * dt)
     player.rocket.place(player.x, player.y, -this.d, player.r, player.p)
   }
 

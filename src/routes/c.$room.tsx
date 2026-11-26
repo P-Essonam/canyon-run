@@ -52,8 +52,8 @@ function remember(key: string, value: string) {
 }
 
 // Degrees of tilt for full steering.
-const ROLL_RANGE = 28
-const PITCH_RANGE = 22
+const ROLL_RANGE = 24
+const PITCH_RANGE = 16
 // The drag distance (px) for full steering.
 const DRAG_RANGE = 90
 
@@ -64,8 +64,12 @@ function clamp(value: number) {
   return Math.max(-1, Math.min(1, value))
 }
 
-function deadzone(value: number) {
-  return Math.abs(value) < 0.05 ? 0 : value
+// A small dead zone, then a curve that answers small tilts quickly:
+// sqrt-ish, so a third of the range already gives over half the push.
+function shape(value: number) {
+  const size = Math.abs(value)
+  if (size < 0.04) return 0
+  return Math.sign(value) * Math.min(1, ((size - 0.04) / 0.96) ** 0.7)
 }
 
 function ControllerPage() {
@@ -148,6 +152,12 @@ function Controller({ room }: { room: string }) {
   const phase = state?.phase ?? "lobby"
   const flying = (phase === "flying" || phase === "countdown") && !!me?.alive
 
+  // "Straight ahead" is how the phone is held when the countdown ends, not
+  // when Launch was tapped: people settle their grip during the countdown.
+  useEffect(() => {
+    if (phase === "flying" && sensor.current) neutral.current = sensor.current
+  }, [phase])
+
   // My run ending: buzz and show the result.
   useEffect(() => {
     if (!me) return
@@ -174,7 +184,9 @@ function Controller({ room }: { room: string }) {
         r = clamp((sensor.current.gamma - neutral.current.gamma) / ROLL_RANGE)
         p = clamp((sensor.current.beta - neutral.current.beta) / PITCH_RANGE)
       }
-      socket.current?.send({ t: "tilt", r: deadzone(r), p: deadzone(p) })
+      r = shape(r)
+      p = shape(p)
+      socket.current?.send({ t: "tilt", r, p })
       if (dot.current) {
         dot.current.style.transform = `translate(${r * 70}px, ${-p * 70}px)`
       }

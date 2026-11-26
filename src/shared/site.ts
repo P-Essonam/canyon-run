@@ -3,7 +3,7 @@
 export const SITE_URL = "https://canyon.useconic.dev"
 export const SITE_NAME = "Canyon Run"
 
-const TITLE = "Canyon Run – Fly a rocket with your phone"
+const TITLE = "Canyon Run – Fly a rocket with your phone · Powered by Conic"
 const DESCRIPTION =
   "A 3D canyon run on your computer, steered by tilting your phone. Scan the code, fly as far as you can and top the leaderboard. Free, in the browser."
 const OG_IMAGE = `${SITE_URL}/og.png`

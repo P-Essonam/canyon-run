@@ -105,10 +105,10 @@ export class Canyon {
   }
 
   // How far the rocket at (x, y), distance d, is from hitting anything
-  // (negative: it hit). Also says whether it is close to a wall.
+  // (negative: it hit). The side walls don't count: the rocket slides
+  // along them (see clampX).
   clearance(d: number, x: number, y: number): number {
-    const half = this.width(d) / 2
-    let clear = Math.min(half - Math.abs(x - this.centerX(d)), y - FLOOR)
+    let clear = y - FLOOR
     for (const obstacle of this.obstaclesBetween(d - 6, d + 6)) {
       if (obstacle.kind === "pillar") {
         const dz = obstacle.d - d
@@ -120,11 +120,18 @@ export class Canyon {
     }
     return clear - ROCKET_RADIUS
   }
+
+  // Keeps the rocket between the side walls.
+  clampX(d: number, x: number) {
+    const room = this.width(d) / 2 - ROCKET_RADIUS
+    const center = this.centerX(d)
+    return Math.max(center - room, Math.min(center + room, x))
+  }
 }
 
-// The rocket's speed (m/s) after `t` seconds of flight: gentle for the
-// first ten seconds, then faster and faster, up to MAX_SPEED.
+// The rocket's speed (m/s) after `t` seconds of flight: steady for the
+// first eight seconds, then faster and faster, up to 70.
 export function speedAt(t: number) {
-  if (t < 8) return 32
-  return Math.min(70, 32 + (t - 8) * 1.15)
+  if (t < 8) return 40
+  return Math.min(70, 40 + (t - 8) * 1.15)
 }
