@@ -17,6 +17,30 @@ export type Obstacle =
   | { kind: "pillar"; d: number; x: number; radius: number }
   // An arch across the canyon: fly under its bottom.
   | { kind: "arch"; d: number; bottom: number; depth: number }
+  // A low wall across the canyon: fly over its top.
+  | { kind: "ridge"; d: number; top: number; depth: number }
+  // A wall from one side (side -1: the left, 1: the right) to `edge`:
+  // fly past it on the other side.
+  | { kind: "blade"; d: number; side: -1 | 1; edge: number; depth: number }
+  // A wall across the canyon with a round hole: fly through it.
+  | { kind: "gate"; d: number; x: number; y: number; hole: number; depth: number }
+
+export type ObstacleKind = Obstacle["kind"]
+
+// New kinds of obstacles show up as the rocket goes further: the distance
+// each one starts at, and how often it comes up once it has.
+const KINDS: Array<{ kind: ObstacleKind; from: number; weight: number }> = [
+  { kind: "pillar", from: 0, weight: 3 },
+  { kind: "arch", from: 0, weight: 2 },
+  { kind: "ridge", from: 600, weight: 2 },
+  { kind: "blade", from: 900, weight: 2.5 },
+  { kind: "gate", from: 1300, weight: 2 },
+]
+
+// The kinds of obstacles met at distance d.
+export function kindsAt(d: number) {
+  return KINDS.filter((entry) => d >= entry.from).map((entry) => entry.kind)
+}
 
 export function mulberry32(seed: number) {
   let a = seed >>> 0
@@ -77,20 +101,50 @@ export class Canyon {
     if (d >= OBSTACLES_FROM) {
       const odds = 0.45 + 0.45 * this.ramp(d)
       if (hash(this.seed, n * 7 + 2) < odds) {
-        const half = this.width(d) / 2
-        if (hash(this.seed, n * 7 + 3) < 0.6) {
-          const radius = 1.6 + hash(this.seed, n * 7 + 4) * 1.4
-          const room = Math.max(0, half - radius - 3.5)
-          const side = hash(this.seed, n * 7 + 5) * 2 - 1
-          result = { kind: "pillar", d, x: this.centerX(d) + side * room, radius }
-        } else {
-          const bottom = 7 + hash(this.seed, n * 7 + 6) * 9
-          result = { kind: "arch", d, bottom, depth: 5 }
-        }
+        result = this.makeObstacle(n, d)
       }
     }
     this.obstacleCache.set(n, result)
     return result
+  }
+
+  private makeObstacle(n: number, d: number): Obstacle {
+    const roll = (k: number) => hash(this.seed, n * 7 + k)
+    const half = this.width(d) / 2
+    const center = this.centerX(d)
+    const kinds = KINDS.filter((entry) => d >= entry.from)
+    const total = kinds.reduce((sum, entry) => sum + entry.weight, 0)
+    let pick = roll(3) * total
+    let kind: ObstacleKind = "pillar"
+    for (const entry of kinds) {
+      kind = entry.kind
+      pick -= entry.weight
+      if (pick < 0) break
+    }
+    switch (kind) {
+      case "pillar": {
+        // Thinner in a narrow pass, so there is always room around it.
+        const radius = Math.min(1.6 + roll(4) * 1.4, half - 3)
+        const room = Math.max(0, half - radius - 3.5)
+        return { kind, d, x: center + (roll(5) * 2 - 1) * room, radius }
+      }
+      case "arch":
+        return { kind, d, bottom: 7 + roll(6) * 9, depth: 5 }
+      case "ridge":
+        return { kind, d, top: 6 + roll(4) * 8, depth: 4 }
+      case "blade": {
+        // Covers more than half the canyon, but always leaves 6 m.
+        const covered = Math.min(2 * half - 6, half * (1.05 + roll(4) * 0.3))
+        const side = roll(5) < 0.5 ? -1 : 1
+        return { kind, d, side, edge: center + side * (half - covered), depth: 4 }
+      }
+      case "gate": {
+        const hole = 4.6
+        const room = Math.max(0, half - hole - 1)
+        const x = center + (roll(4) * 2 - 1) * room
+        return { kind, d, x, y: 7 + roll(5) * 12, hole, depth: 3 }
+      }
+    }
   }
 
   obstaclesBetween(from: number, to: number): Array<Obstacle> {
@@ -105,8 +159,8 @@ export class Canyon {
   }
 
   // How far the rocket at (x, y), distance d, is from hitting anything
-  // (negative: it hit). Only pillars and arches count: the rocket slides
-  // along the side walls and the floor (see clampX and clampY).
+  // (negative: it hit). Only obstacles count: the rocket slides along the
+  // side walls and the floor (see clampX and clampY).
   clearance(d: number, x: number, y: number): number {
     let clear = Infinity
     for (const obstacle of this.obstaclesBetween(d - 6, d + 6)) {
@@ -114,9 +168,13 @@ export class Canyon {
         const dz = obstacle.d - d
         const gap = Math.hypot(x - obstacle.x, dz) - obstacle.radius
         clear = Math.min(clear, gap)
-      } else if (Math.abs(obstacle.d - d) < obstacle.depth / 2 + ROCKET_RADIUS) {
-        clear = Math.min(clear, obstacle.bottom - y)
+        continue
       }
+      if (Math.abs(obstacle.d - d) >= obstacle.depth / 2 + ROCKET_RADIUS) continue
+      if (obstacle.kind === "arch") clear = Math.min(clear, obstacle.bottom - y)
+      else if (obstacle.kind === "ridge") clear = Math.min(clear, y - obstacle.top)
+      else if (obstacle.kind === "blade") clear = Math.min(clear, obstacle.side * (obstacle.edge - x))
+      else clear = Math.min(clear, obstacle.hole - Math.hypot(x - obstacle.x, y - obstacle.y))
     }
     return clear - ROCKET_RADIUS
   }

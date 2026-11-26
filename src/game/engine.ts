@@ -8,6 +8,7 @@ import {
   speedAt,
 } from "./canyon"
 import { DISCONNECT_GRACE_MS, PLAYER_COLORS } from "../shared/protocol"
+import type { Obstacle } from "./canyon"
 import type { Sound } from "./audio"
 import type { GameState, Phase } from "../shared/protocol"
 
@@ -470,6 +471,7 @@ export class Game {
 
 type Materials = {
   rock: THREE.MeshStandardMaterial
+  glow: THREE.MeshStandardMaterial
 }
 
 function makeMaterials(): Materials {
@@ -479,6 +481,13 @@ function makeMaterials(): Materials {
       flatShading: true,
       roughness: 0.95,
       metalness: 0,
+    }),
+    // The ring around a gate's hole, so it reads from far away.
+    glow: new THREE.MeshStandardMaterial({
+      color: "#ffd27a",
+      emissive: "#ff9a3c",
+      emissiveIntensity: 1.4,
+      roughness: 0.4,
     }),
   }
 }
@@ -576,34 +585,91 @@ function buildChunk(canyon: Canyon, index: number, materials: Materials) {
   group.add(new THREE.Mesh(geometry, materials.rock))
 
   for (const obstacle of canyon.obstaclesBetween(index * CHUNK, (index + 1) * CHUNK)) {
-    if (obstacle.kind === "pillar") {
-      const height = WALL_HEIGHT + 6
-      const pillar = new THREE.Mesh(
-        tinted(new THREE.CylinderGeometry(obstacle.radius * 0.8, obstacle.radius * 1.15, height, 7, 5), "#a8442a", seed),
-        materials.rock
-      )
-      pillar.position.set(obstacle.x, height / 2 - 1, -obstacle.d)
-      group.add(pillar)
-    } else {
-      const span = canyon.width(obstacle.d) + 26
-      const height = WALL_HEIGHT - obstacle.bottom + 2
-      const arch = new THREE.Mesh(
-        tinted(new THREE.BoxGeometry(span, height, obstacle.depth, 8, 3, 1), "#b54e2d", seed),
-        materials.rock
-      )
-      arch.position.set(canyon.centerX(obstacle.d), obstacle.bottom + height / 2, -obstacle.d)
-      group.add(arch)
-    }
+    group.add(buildObstacle(canyon, obstacle, materials))
   }
   return group
 }
 
-// A geometry with jagged vertices and per-face rock colors.
-function tinted(source: THREE.BufferGeometry, hex: string, seed: number) {
-  const geometry = source.toNonIndexed()
-  source.dispose()
+function buildObstacle(canyon: Canyon, obstacle: Obstacle, materials: Materials) {
+  const seed = canyon.seed
+  const z = -obstacle.d
+  const center = canyon.centerX(obstacle.d)
+  // Wide enough to sink into both cliffs.
+  const span = canyon.width(obstacle.d) + 26
+  const rock = (geometry: THREE.BufferGeometry, hex: string) =>
+    new THREE.Mesh(tinted(geometry, hex, seed), materials.rock)
+
+  switch (obstacle.kind) {
+    case "pillar": {
+      const height = WALL_HEIGHT + 6
+      const pillar = rock(
+        new THREE.CylinderGeometry(obstacle.radius * 0.8, obstacle.radius * 1.15, height, 7, 5),
+        "#a8442a"
+      )
+      pillar.position.set(obstacle.x, height / 2 - 1, z)
+      return pillar
+    }
+    case "arch": {
+      const height = WALL_HEIGHT - obstacle.bottom + 2
+      const arch = rock(new THREE.BoxGeometry(span, height, obstacle.depth, 8, 3, 1), "#b54e2d")
+      arch.position.set(center, obstacle.bottom + height / 2, z)
+      return arch
+    }
+    case "ridge": {
+      const height = obstacle.top + 1
+      const ridge = rock(new THREE.BoxGeometry(span, height, obstacle.depth, 10, 3, 1), "#8e3a22")
+      ridge.position.set(center, height / 2 - 1, z)
+      return ridge
+    }
+    case "blade": {
+      // From the edge to well inside the cliff it grows from.
+      const outer = center + obstacle.side * (canyon.width(obstacle.d) / 2 + 13)
+      const width = Math.abs(outer - obstacle.edge)
+      const height = WALL_HEIGHT + 4
+      const blade = rock(new THREE.BoxGeometry(width, height, obstacle.depth, 4, 6, 1), "#c0623a")
+      blade.position.set((outer + obstacle.edge) / 2, height / 2 - 1, z)
+      return blade
+    }
+    case "gate": {
+      const top = WALL_HEIGHT + 2
+      const shape = new THREE.Shape()
+      shape.moveTo(-span / 2, -1)
+      shape.lineTo(span / 2, -1)
+      shape.lineTo(span / 2, top)
+      shape.lineTo(-span / 2, top)
+      shape.closePath()
+      const hole = new THREE.Path()
+      hole.absarc(obstacle.x - center, obstacle.y, obstacle.hole, 0, Math.PI * 2, true)
+      shape.holes.push(hole)
+      const wall = new THREE.ExtrudeGeometry(shape, {
+        depth: obstacle.depth,
+        bevelEnabled: false,
+        curveSegments: 20,
+      })
+      wall.translate(0, 0, -obstacle.depth / 2)
+      const gate = new THREE.Group()
+      const mesh = new THREE.Mesh(tinted(wall, "#a64a2b", seed, false), materials.rock)
+      mesh.position.set(center, 0, z)
+      gate.add(mesh)
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(obstacle.hole, 0.35, 8, 40),
+        materials.glow
+      )
+      ring.position.set(obstacle.x, obstacle.y, z + obstacle.depth / 2 + 0.1)
+      gate.add(ring)
+      return gate
+    }
+  }
+}
+
+// A geometry with jagged vertices and per-face rock colors. `rough: false`
+// keeps it flat and one color: for a shape cut in long thin triangles (a
+// wall with a hole), where jagged faces would show as streaks.
+function tinted(source: THREE.BufferGeometry, hex: string, seed: number, rough = true) {
+  const geometry = source.index ? source.toNonIndexed() : source
+  if (geometry !== source) source.dispose()
   const position = geometry.getAttribute("position") as THREE.BufferAttribute
-  for (let i = 0; i < position.count; i++) {
+  for (let i = 0; rough && i < position.count; i++) {
     const key = Math.round(position.getX(i) * 10) * 73856093 ^ Math.round(position.getY(i) * 10) * 19349663 ^ Math.round(position.getZ(i) * 10) * 83492791
     const n = hash(seed, key) - 0.5
     position.setXYZ(i, position.getX(i) + n * 0.5, position.getY(i) + n * 0.3, position.getZ(i) + n * 0.5)
@@ -611,7 +677,7 @@ function tinted(source: THREE.BufferGeometry, hex: string, seed: number) {
   const colors: Array<number> = []
   const color = new THREE.Color()
   for (let face = 0; face < position.count / 3; face++) {
-    color.set(hex).multiplyScalar(0.8 + hash(seed, face * 11 + 5) * 0.4)
+    color.set(hex).multiplyScalar(rough ? 0.8 + hash(seed, face * 11 + 5) * 0.4 : 1)
     for (let v = 0; v < 3; v++) colors.push(color.r, color.g, color.b)
   }
   geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3))
