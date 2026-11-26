@@ -868,3 +868,75 @@ button {
 .pad-switch button:disabled {
   opacity: 0.35;
 }
+
+/* The language picker: a native select under a short code. */
+.lang {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.lang select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 16px; /* iOS zooms into smaller fields */
+}
+
+.lang-code {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.lang-code::after {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 8px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-3px) rotate(45deg);
+}
+
+.lang:focus-within {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
+}
+
+.lang-screen {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  color: var(--ink);
+  background: rgba(255, 248, 239, 0.92);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.pad-top-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lang-phone {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fafafa;
+}
+
+.lang-phone .lang-code {
+  font-size: 12px;
+}

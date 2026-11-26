@@ -5,6 +5,7 @@ import type {
   GameState,
   PhoneMessage,
   ScreenMessage,
+  SubmitError,
   ToPhoneMessage,
   ToScreenMessage,
 } from "../shared/protocol"
@@ -229,19 +230,19 @@ export class Room extends DurableObject<Env> {
   private async submit(ws: WebSocket, pid: string, rawName: string) {
     const room = this.load()
     const result = room.results[pid]
-    const reply = (ok: boolean, reason?: string) =>
+    const reply = (ok: boolean, reason?: SubmitError) =>
       this.send(ws, { t: "submitted", ok, reason } satisfies ToPhoneMessage)
-    if (!result || result.submitted) return reply(false, "No run to save")
+    if (!result || result.submitted) return reply(false, "noRun")
     const name = cleanName(rawName)
-    if (!name) return reply(false, "Pick another name")
+    if (!name) return reply(false, "badName")
     if (!plausible(result.distance, result.durationMs)) {
-      return reply(false, "That run can't be saved")
+      return reply(false, "implausible")
     }
     try {
       await saveScore(this.env.DB, name, result.distance)
     } catch (error) {
       console.error("Saving a score failed", error)
-      return reply(false, "Couldn't save, try again")
+      return reply(false, "saveFailed")
     }
     result.submitted = true
     this.save(room)

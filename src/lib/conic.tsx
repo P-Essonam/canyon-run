@@ -1,15 +1,17 @@
 import { CONIC_URL } from "../shared/protocol"
+import { useI18n } from "./i18n"
 
 // "Powered by Conic", on the screen and on the phone's game-over screen.
 // It links to Conic, where you can deploy your own Canyon Run.
 
 export function PoweredByConic({
   className = "",
-  label = "Powered by",
+  label,
 }: {
   className?: string
   label?: string
 }) {
+  const { t } = useI18n()
   return (
     <a
       className={`conic-badge ${className}`}
@@ -17,7 +19,7 @@ export function PoweredByConic({
       target="_blank"
       rel="noopener"
     >
-      <span className="conic-label">{label}</span>
+      <span className="conic-label">{label ?? t.poweredBy}</span>
       <ConicCone />
       <span className="conic-name">Conic</span>
     </a>

@@ -5,6 +5,8 @@ import { Game } from "../game/engine"
 import { Sound } from "../game/audio"
 import { RoomSocket, randomId, roomUrl } from "../lib/socket"
 import { PoweredByConic } from "../lib/conic"
+import { useI18n } from "../lib/i18n"
+import { LangPicker } from "../lib/lang-picker"
 import { PLAYER_COLORS } from "../shared/protocol"
 import type {
   GameState,
@@ -41,10 +43,11 @@ function isPhone() {
 
 function ScreenPage() {
   const [phone] = useState(isPhone)
+  const { t } = useI18n()
   if (phone) {
     return (
       <main className="elsewhere">
-        <p>Open this page on a computer, then scan the code with this phone.</p>
+        <p>{t.openOnComputer}</p>
         <PoweredByConic />
       </main>
     )
@@ -56,6 +59,7 @@ function Screen() {
   const canvas = useRef<HTMLCanvasElement>(null)
   const [room] = useState(roomId)
   const [state, setState] = useState<GameState | null>(null)
+  const { t } = useI18n()
   const [muted, setMuted] = useState(true)
   const [volume, setVolume] = useState(0.7)
   const [tab, setTab] = useState<"play" | "board">("play")
@@ -158,7 +162,7 @@ function Screen() {
                   className={tab === key ? "is-on" : ""}
                   onClick={() => setTab(key)}
                 >
-                  {key === "play" ? "Play" : "Leaderboard"}
+                  {key === "play" ? t.play : t.leaderboard}
                 </button>
               ))}
             </div>
@@ -167,9 +171,9 @@ function Screen() {
               <Board board={board} hidden={tab !== "board"} />
             <div className={`qr-card ${tab === "play" ? "" : "is-hidden"}`} aria-hidden={tab !== "play"}>
               <div className="qr" dangerouslySetInnerHTML={{ __html: qr }} />
-              <p className="scan">Scan to fly</p>
-              <p className="muted">Tilt your phone or slide your thumb to steer</p>
-              <div className="seats" role="radiogroup" aria-label="Players">
+              <p className="scan">{t.scanToFly}</p>
+              <p className="muted">{t.steerHint}</p>
+              <div className="seats" role="radiogroup" aria-label={t.players}>
                 {[1, 2].map((n) => (
                   <button
                     key={n}
@@ -180,7 +184,7 @@ function Screen() {
                     disabled={n === 1 && players.some((p) => p.slot === 1)}
                     onClick={() => game.current?.setSeats(n)}
                   >
-                    {n === 1 ? "1 player" : "2 players"}
+                    {n === 1 ? t.onePlayer : t.twoPlayers}
                   </button>
                 ))}
               </div>
@@ -194,15 +198,15 @@ function Screen() {
                       style={{ "--player": PLAYER_COLORS[slot] } as React.CSSProperties}
                     >
                       <span className="dot" />
-                      Player {slot + 1}
+                      {t.player(slot + 1)}
                       <span className="slot-status">
                         {!player
-                          ? "Waiting"
+                          ? t.waiting
                           : !player.connected
-                            ? "Reconnecting"
+                            ? t.reconnecting
                             : player.ready
-                              ? "Ready"
-                              : "Joined"}
+                              ? t.ready
+                              : t.joined}
                       </span>
                     </div>
                   )
@@ -242,7 +246,7 @@ function Screen() {
 
       {phase === "over" && state && (
         <div className="card over">
-          <h2>Game over</h2>
+          <h2>{t.gameOver}</h2>
           {playing.length > 1 ? (
             <p
               className="winner"
@@ -250,14 +254,14 @@ function Screen() {
                 color: state.winner === null ? undefined : PLAYER_COLORS[state.winner],
               }}
             >
-              {state.winner === null ? "It's a tie!" : `Player ${state.winner + 1} wins!`}
+              {state.winner === null ? t.tie : t.wins(state.winner + 1)}
             </p>
           ) : null}
           <ul className="results">
             {playing.map((p) => (
               <li key={p.slot} style={{ "--player": PLAYER_COLORS[p.slot] } as React.CSSProperties}>
                 <span className="dot" />
-                Player {p.slot + 1}
+                {t.player(p.slot + 1)}
                 <strong>{p.distance} m</strong>
               </li>
             ))}
@@ -266,8 +270,9 @@ function Screen() {
       )}
 
       <PoweredByConic className="badge-screen" />
+      <LangPicker className="lang-screen" />
       <div className="sound">
-        <button onClick={toggleSound} aria-label={muted ? "Turn sound on" : "Turn sound off"}>
+        <button onClick={toggleSound} aria-label={muted ? t.soundOn : t.soundOff}>
           {muted || volume === 0 ? <SoundOff /> : <SoundOn />}
         </button>
         <input
@@ -276,7 +281,7 @@ function Screen() {
           max={1}
           step={0.05}
           value={muted ? 0 : volume}
-          aria-label="Volume"
+          aria-label={t.volume}
           onChange={(event) => changeVolume(Number(event.target.value))}
         />
       </div>
@@ -286,10 +291,11 @@ function Screen() {
 
 function Board({ board, hidden }: { board: Leaderboard; hidden: boolean }) {
   const [range, setRange] = useState<"today" | "allTime">("today")
+  const { t } = useI18n()
   const entries = board[range]
   return (
     <div className={`board ${hidden ? "is-hidden" : ""}`} aria-hidden={hidden}>
-      <div className="seats" role="radiogroup" aria-label="Range">
+      <div className="seats" role="radiogroup" aria-label={t.range}>
         {(["today", "allTime"] as const).map((key) => (
           <button
             key={key}
@@ -298,12 +304,12 @@ function Board({ board, hidden }: { board: Leaderboard; hidden: boolean }) {
             className={range === key ? "is-on" : ""}
             onClick={() => setRange(key)}
           >
-            {key === "today" ? "Today" : "All time"}
+            {key === "today" ? t.today : t.allTime}
           </button>
         ))}
       </div>
       {entries.length === 0 ? (
-        <p className="muted board-empty">No runs yet. Be the first!</p>
+        <p className="muted board-empty">{t.noRuns}</p>
       ) : (
         <ol>
           {entries.map((entry, index) => (

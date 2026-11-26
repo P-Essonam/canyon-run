@@ -51,7 +51,7 @@ export type ToPhoneMessage =
   | { t: "full" }
   | { t: "state"; state: GameState }
   | { t: "graze" }
-  | { t: "submitted"; ok: boolean; reason?: string }
+  | { t: "submitted"; ok: boolean; reason?: SubmitError }
 
 // Screen → room.
 export type ScreenMessage =
@@ -74,3 +74,6 @@ export type Leaderboard = {
 export const PLAYER_COLORS = ["#8b3dff", "#22d3ee"] as const
 
 export const CONIC_URL = "https://useconic.dev/?ref=canyon-run"
+
+// Why a score was not saved. The phone shows it in its own language.
+export type SubmitError = "noRun" | "badName" | "implausible" | "saveFailed"

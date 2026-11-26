@@ -2,6 +2,9 @@ import { createFileRoute } from "@tanstack/react-router"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { RoomSocket, randomId, roomUrl } from "../lib/socket"
 import { PoweredByConic } from "../lib/conic"
+import { useI18n } from "../lib/i18n"
+import type { Messages } from "../lib/i18n"
+import { LangPicker } from "../lib/lang-picker"
 import {
   NAME_MAX,
   PLAYER_COLORS,
@@ -9,7 +12,12 @@ import {
   SENSOR_TIMEOUT_MS,
   TILT_INTERVAL_MS,
 } from "../shared/protocol"
-import type { GameState, PhoneMessage, ToPhoneMessage } from "../shared/protocol"
+import type {
+  GameState,
+  PhoneMessage,
+  SubmitError,
+  ToPhoneMessage,
+} from "../shared/protocol"
 import type { SocketStatus } from "../lib/socket"
 
 // The phone: a controller for one rocket. Tilt to steer; without motion
@@ -62,7 +70,7 @@ type Control = "tilt" | "touch"
 const CONTROL_KEY = "canyon-run:control"
 
 type Run = { distance: number }
-type Submit = "idle" | "sending" | "saved" | "skipped" | { error: string }
+type Submit = "idle" | "sending" | "saved" | "skipped" | { error: SubmitError }
 
 function clamp(value: number) {
   return Math.max(-1, Math.min(1, value))
@@ -78,12 +86,13 @@ function shape(value: number) {
 
 function ControllerPage() {
   const { room } = Route.useParams()
+  const { t } = useI18n()
   if (!ROOM_PATTERN.test(room)) {
     return (
       <main className="pad">
         <div className="pad-body">
-          <p className="notice-title">Wrong link</p>
-          <p className="pad-hint">Scan the code on the screen again.</p>
+          <p className="notice-title">{t.wrongLink}</p>
+          <p className="pad-hint">{t.scanAgain}</p>
         </div>
       </main>
     )
@@ -106,6 +115,7 @@ function Controller({ room }: { room: string }) {
   const [noSensor, setNoSensor] = useState(false)
   const [run, setRun] = useState<Run | null>(null)
   const [submit, setSubmit] = useState<Submit>("idle")
+  const { t } = useI18n()
   const [name, setName] = useState(() => stored(NAME_KEY, () => ""))
 
   const socket = useRef<RoomSocket<ToPhoneMessage, PhoneMessage> | null>(null)
@@ -135,7 +145,7 @@ function Controller({ room }: { room: string }) {
             navigator.vibrate?.(15)
             return
           case "submitted":
-            setSubmit(message.ok ? "saved" : { error: message.reason ?? "Couldn't save" })
+            setSubmit(message.ok ? "saved" : { error: message.reason ?? "saveFailed" })
             return
         }
       },
@@ -242,7 +252,7 @@ function Controller({ room }: { room: string }) {
   }, [control, noSensor])
 
   const picker = (
-    <div className="pad-switch" role="radiogroup" aria-label="Steering">
+    <div className="pad-switch" role="radiogroup" aria-label={t.steering}>
       {(["tilt", "touch"] as const).map((key) => {
         const on = key === "tilt" ? control === "tilt" && !noSensor : control === "touch" || noSensor
         return (
@@ -254,17 +264,17 @@ function Controller({ room }: { room: string }) {
             disabled={key === "tilt" && noSensor}
             onClick={() => pickControl(key)}
           >
-            {key === "tilt" ? "Tilt" : "Touch"}
+            {key === "tilt" ? t.tilt : t.touch}
           </button>
         )
       })}
     </div>
   )
   const pickerHint = noSensor
-    ? "Motion sensors are off on this phone: steer with your thumb."
+    ? t.noSensorHint
     : control === "tilt"
-      ? "Hold your phone the way that feels straight ahead, then tap."
-      : "Hold anywhere on the screen and slide your thumb to steer."
+      ? t.tiltLaunchHint
+      : t.touchLaunchHint
 
   const save = () => {
     const trimmed = name.trim().slice(0, NAME_MAX)
@@ -280,7 +290,7 @@ function Controller({ room }: { room: string }) {
   if (full) {
     return (
       <Shell style={style}>
-        <Notice title="Game is full" text="Someone is already playing on this screen. Wait for the next game, or pick 2 players on the screen." />
+        <Notice title={t.full} text={t.fullText} />
       </Shell>
     )
   }
@@ -289,11 +299,11 @@ function Controller({ room }: { room: string }) {
     return (
       <Shell style={style}>
         {status === "closed" ? (
-          <Notice title="Disconnected" text="Scan the code on the screen again." />
+          <Notice title={t.disconnected} text={t.scanAgain} />
         ) : (
           <div className="pad-body">
             <span className="spinner" aria-hidden="true" />
-            <p className="pad-label">Connecting</p>
+            <p className="pad-label">{t.connecting}</p>
           </div>
         )}
       </Shell>
@@ -327,7 +337,7 @@ function Controller({ room }: { room: string }) {
             onPointerDown={(event) => event.stopPropagation()}
             onClick={() => socket.current?.send({ t: "quit" })}
           >
-            Quit
+            {t.quit}
           </button>
         }
         onPointerDown={onDown}
@@ -351,12 +361,12 @@ function Controller({ room }: { room: string }) {
         </div>
         <footer className="pad-foot">
           <p className="pad-label">
-            {phase === "countdown" ? "Get ready" : dragMode ? "Drag to steer" : "Tilt to steer"}
+            {phase === "countdown" ? t.getReady : dragMode ? t.dragToSteer : t.tiltToSteer}
           </p>
           <p className="pad-hint">
             {dragMode
-              ? "Hold anywhere and slide your thumb"
-              : "Left and right to turn, forward and back to dive and climb"}
+              ? t.dragHint
+              : t.tiltHint}
           </p>
         </footer>
       </Shell>
@@ -371,19 +381,19 @@ function Controller({ room }: { room: string }) {
         <div className="pad-body">
           <div className="result">
             <p className="pad-label">
-              {phase === "over" && twoPlayers ? verdict(state, slot) : "Distance"}
+              {phase === "over" && twoPlayers ? verdict(state, slot, t) : t.distance}
             </p>
             <p className="result-distance">
               {run.distance}
               <span>m</span>
             </p>
             {twoPlayers && phase === "flying" && (
-              <p className="pad-hint">The other rocket is still flying…</p>
+              <p className="pad-hint">{t.otherStillFlying}</p>
             )}
           </div>
 
           {submit === "saved" ? (
-            <p className="saved">Saved to the leaderboard</p>
+            <p className="saved">{t.saved}</p>
           ) : submit === "skipped" ? null : (
             <form
               className="name-form"
@@ -393,24 +403,24 @@ function Controller({ room }: { room: string }) {
               }}
             >
               <label className="pad-label" htmlFor="name">
-                Leaderboard name
+                {t.nameLabel}
               </label>
               <div className="name-row">
                 <input
                   id="name"
                   value={name}
                   maxLength={NAME_MAX}
-                  placeholder="Your name"
+                  placeholder={t.namePlaceholder}
                   autoComplete="nickname"
                   onChange={(event) => setName(event.target.value)}
                 />
                 <button type="submit" disabled={submit === "sending" || !name.trim()}>
-                  {submit === "sending" ? "Saving…" : "Save"}
+                  {submit === "sending" ? t.saving : t.save}
                 </button>
               </div>
-              {typeof submit === "object" && <p className="error">{submit.error}</p>}
+              {typeof submit === "object" && <p className="error">{t[submit.error]}</p>}
               <button type="button" className="link" onClick={() => setSubmit("skipped")}>
-                Skip
+                {t.skip}
               </button>
             </form>
           )}
@@ -418,9 +428,9 @@ function Controller({ room }: { room: string }) {
         <footer className="pad-foot">
           {picker}
           <button className="primary" onClick={() => void launch()}>
-            Launch again
+            {t.launchAgain}
           </button>
-          <PoweredByConic className="badge-phone" label="Deploy your own with" />
+          <PoweredByConic className="badge-phone" label={t.deployYourOwn} />
         </footer>
       </Shell>
     )
@@ -434,10 +444,10 @@ function Controller({ room }: { room: string }) {
           <span className="spinner" aria-hidden="true" />
           <p className="pad-label">
             {phase === "flying" || phase === "over"
-              ? "Next game starts soon"
+              ? t.nextGameSoon
               : waitingFor
-                ? `Waiting for player ${waitingFor.slot + 1}`
-                : "Ready"}
+                ? t.waitingFor(waitingFor.slot + 1)
+                : t.ready}
           </p>
         </div>
       </Shell>
@@ -455,20 +465,20 @@ function Controller({ room }: { room: string }) {
         </div>
       </div>
       <footer className="pad-foot">
-        <p className="pad-label">Steer by</p>
+        <p className="pad-label">{t.steerBy}</p>
         {picker}
         <p className="pad-hint">{pickerHint}</p>
         <button className="primary" onClick={() => void launch()}>
-          Launch
+          {t.launch}
         </button>
       </footer>
     </Shell>
   )
 }
 
-function verdict(state: GameState | null, slot: number) {
-  if (!state || state.winner === null) return "It's a tie"
-  return state.winner === slot ? "You win" : `Player ${state.winner + 1} wins`
+function verdict(state: GameState | null, slot: number, t: Messages) {
+  if (!state || state.winner === null) return t.tieShort
+  return state.winner === slot ? t.youWin : t.playerWins(state.winner + 1)
 }
 
 // The frame every phone screen shares: name on the left, player (or Quit)
@@ -485,17 +495,22 @@ function Shell({
   action?: React.ReactNode
   children: React.ReactNode
 } & React.HTMLAttributes<HTMLElement>) {
+  const { t } = useI18n()
   return (
     <main className={`pad ${className}`} {...rest}>
       <header className="pad-top">
         <span className="pad-brand">Canyon Run</span>
-        {action ??
-          (player !== undefined && (
-            <span className="pad-chip">
-              <span className="dot" />
-              Player {player + 1}
-            </span>
-          ))}
+        <div className="pad-top-end">
+          {/* No language switch mid-flight: a stray tap would steal the thumb. */}
+          {!action && <LangPicker className="lang-phone" />}
+          {action ??
+            (player !== undefined && (
+              <span className="pad-chip">
+                <span className="dot" />
+                {t.player(player + 1)}
+              </span>
+            ))}
+        </div>
       </header>
       {children}
     </main>
