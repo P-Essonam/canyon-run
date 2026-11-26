@@ -3,6 +3,7 @@ import {
   CEILING,
   Canyon,
   WALL_HEIGHT,
+  MAX_SPEED,
   hash,
   speedAt,
 } from "./canyon"
@@ -244,7 +245,7 @@ export class Game {
         this.flightTime += dt
         const speed = speedAt(this.flightTime)
         this.d += speed * dt
-        this.sound.setEngine(0.35 + 0.65 * (speed / 70))
+        this.sound.setEngine(0.35 + 0.65 * (speed / MAX_SPEED))
         for (const player of this.players.values()) {
           if (!player.playing || !player.alive) continue
           if (player.goneSince !== null && now - player.goneSince > DISCONNECT_GRACE_MS) {
@@ -284,7 +285,7 @@ export class Game {
       player.rocket.place(player.x, player.y, -this.d, player.r, player.p)
       return
     }
-    const lateral = 16 * (0.85 + (speed / 70) * 0.5)
+    const lateral = 16 * (0.85 + (speed / MAX_SPEED) * 0.5)
     player.x = this.canyon.clampX(this.d, player.x + player.r * lateral * dt)
     // Up and down as quick as left and right.
     player.y = this.canyon.clampY(player.y + player.p * lateral * 0.9 * dt)

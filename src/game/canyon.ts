@@ -134,9 +134,10 @@ export class Canyon {
   }
 }
 
-// The rocket's speed (m/s) after `t` seconds of flight: steady for the
-// first eight seconds, then faster and faster, up to 70.
+// The rocket's speed (m/s) after `t` seconds of flight: fast from the
+// start, steady for five seconds, then faster and faster, up to MAX_SPEED.
+export const MAX_SPEED = 85
 export function speedAt(t: number) {
-  if (t < 8) return 40
-  return Math.min(70, 40 + (t - 8) * 1.15)
+  if (t < 5) return 55
+  return Math.min(MAX_SPEED, 55 + (t - 5) * 1.3)
 }
