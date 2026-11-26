@@ -159,12 +159,31 @@ function Controller({ room }: { room: string }) {
   // Motion sensors: keep the latest reading.
   useEffect(() => {
     const onOrientation = (event: DeviceOrientationEvent) => {
-      if (event.beta === null || event.gamma === null) return
+      // Chrome without a gyroscope sends one event with empty values.
+      if (event.beta === null || event.gamma === null) {
+        if (!sensor.current) setNoSensor(true)
+        return
+      }
       sensor.current = { beta: event.beta, gamma: event.gamma }
       neutral.current ??= sensor.current
     }
     window.addEventListener("deviceorientation", onOrientation)
-    return () => window.removeEventListener("deviceorientation", onOrientation)
+    // Android sends readings right away, without asking: none after a
+    // moment means no usable sensor, so Touch is the only way. iOS sends
+    // nothing before permission, so there Tilt stays on offer until a
+    // Launch shows it doesn't work.
+    const api =
+      typeof DeviceOrientationEvent === "undefined"
+        ? null
+        : (DeviceOrientationEvent as unknown as { requestPermission?: unknown })
+    const asksFirst = typeof api?.requestPermission === "function"
+    const timer = setTimeout(() => {
+      if (!asksFirst && !sensor.current) setNoSensor(true)
+    }, SENSOR_TIMEOUT_MS)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener("deviceorientation", onOrientation)
+    }
   }, [])
 
   const me = state?.players.find((p) => p.slot === slot) ?? null
@@ -251,30 +270,23 @@ function Controller({ room }: { room: string }) {
     socket.current?.send({ t: "ready" })
   }, [control, noSensor])
 
-  const picker = (
+  // Without a usable sensor there is nothing to pick: Touch, silently.
+  const picker = noSensor ? null : (
     <div className="pad-switch" role="radiogroup" aria-label={t.steering}>
-      {(["tilt", "touch"] as const).map((key) => {
-        const on = key === "tilt" ? control === "tilt" && !noSensor : control === "touch" || noSensor
-        return (
-          <button
-            key={key}
-            role="radio"
-            aria-checked={on}
-            className={on ? "is-on" : ""}
-            disabled={key === "tilt" && noSensor}
-            onClick={() => pickControl(key)}
-          >
-            {key === "tilt" ? t.tilt : t.touch}
-          </button>
-        )
-      })}
+      {(["tilt", "touch"] as const).map((key) => (
+        <button
+          key={key}
+          role="radio"
+          aria-checked={control === key}
+          className={control === key ? "is-on" : ""}
+          onClick={() => pickControl(key)}
+        >
+          {key === "tilt" ? t.tilt : t.touch}
+        </button>
+      ))}
     </div>
   )
-  const pickerHint = noSensor
-    ? t.noSensorHint
-    : control === "tilt"
-      ? t.tiltLaunchHint
-      : t.touchLaunchHint
+  const pickerHint = !noSensor && control === "tilt" ? t.tiltLaunchHint : t.touchLaunchHint
 
   const save = () => {
     const trimmed = name.trim().slice(0, NAME_MAX)
@@ -465,7 +477,7 @@ function Controller({ room }: { room: string }) {
         </div>
       </div>
       <footer className="pad-foot">
-        <p className="pad-label">{t.steerBy}</p>
+        {picker && <p className="pad-label">{t.steerBy}</p>}
         {picker}
         <p className="pad-hint">{pickerHint}</p>
         <button className="primary" onClick={() => void launch()}>

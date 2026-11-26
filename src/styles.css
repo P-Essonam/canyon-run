@@ -869,56 +869,116 @@ button {
   opacity: 0.35;
 }
 
-/* The language picker: a native select under a short code. */
+/* The language picker, in the style of shadcn/ui's select. */
 .lang {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
+  --lang-bg: #ffffff;
+  --lang-fg: #09090b;
+  --lang-muted: #71717a;
+  --lang-border: #e4e4e7;
+  --lang-hover: #f4f4f5;
 }
 
-.lang select {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  opacity: 0;
+.lang-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--lang-border);
+  border-radius: 10px;
+  background: var(--lang-bg);
+  color: var(--lang-fg);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  font-size: 16px; /* iOS zooms into smaller fields */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.lang-trigger:hover {
+  background: var(--lang-hover);
+}
+
+.lang-trigger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--violet) 35%, transparent);
 }
 
 .lang-code {
   font-family: var(--mono);
   font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
 }
 
-.lang-code::after {
-  content: "";
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-left: 8px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  transform: translateY(-3px) rotate(45deg);
+.lang-chevron {
+  color: var(--lang-muted);
+  transition: transform 0.15s ease;
 }
 
-.lang:focus-within {
-  outline: 2px solid var(--violet);
-  outline-offset: 2px;
+.lang.is-open .lang-chevron {
+  transform: rotate(180deg);
+}
+
+.lang-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  min-width: 168px;
+  padding: 4px;
+  border: 1px solid var(--lang-border);
+  border-radius: 12px;
+  background: var(--lang-bg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.08);
+  transform-origin: top right;
+  animation: lang-in 0.12s ease-out;
+}
+
+@keyframes lang-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+}
+
+.lang-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--lang-fg);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lang-item:focus {
+  outline: none;
+  background: var(--lang-hover);
 }
 
 .lang-screen {
   position: absolute;
   top: 24px;
   right: 24px;
+}
+
+.lang-screen .lang-trigger {
   height: 44px;
-  padding: 0 16px;
   border-radius: 999px;
-  color: var(--ink);
+  padding: 0 16px;
+  border-color: transparent;
   background: rgba(255, 248, 239, 0.92);
+  color: var(--ink);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
@@ -928,15 +988,29 @@ button {
   gap: 8px;
 }
 
+/* On the phone: dark, like the rest of the controller. */
 .lang-phone {
+  --lang-bg: #18181b;
+  --lang-fg: #fafafa;
+  --lang-muted: #a1a1aa;
+  --lang-border: rgba(255, 255, 255, 0.12);
+  --lang-hover: rgba(255, 255, 255, 0.08);
+}
+
+.lang-phone .lang-trigger {
   height: 32px;
-  padding: 0 12px;
+  padding: 0 10px;
+  gap: 6px;
   border-radius: 999px;
-  border: 1px solid var(--line-strong);
   background: rgba(255, 255, 255, 0.04);
-  color: #fafafa;
+  box-shadow: none;
 }
 
 .lang-phone .lang-code {
   font-size: 12px;
+}
+
+.lang-phone .lang-item {
+  height: 44px; /* a thumb-sized row */
+  font-size: 15px;
 }
