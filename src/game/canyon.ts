@@ -14,7 +14,11 @@ export const ROCKET_RADIUS = 0.9
 // The first stretch is straight and wide, so a first try always lasts.
 const EASY_UNTIL = 260
 const OBSTACLES_FROM = 320
-const OBSTACLE_SPACING = 70
+// One obstacle at most per slot of this many meters, placed somewhere in
+// its first OBSTACLE_JITTER meters: two in a row are always at least
+// 80 m apart, about a second at top speed, time to line up the next one.
+const OBSTACLE_SPACING = 110
+const OBSTACLE_JITTER = 30
 
 export type Obstacle =
   | { kind: "pillar"; d: number; x: number; radius: number }
@@ -100,7 +104,7 @@ export class Canyon {
     const cached = this.obstacleCache.get(n)
     if (cached !== undefined) return cached
     let result: Obstacle | null = null
-    const d = n * OBSTACLE_SPACING + hash(this.seed, n * 7 + 1) * 30
+    const d = n * OBSTACLE_SPACING + hash(this.seed, n * 7 + 1) * OBSTACLE_JITTER
     if (d >= OBSTACLES_FROM) {
       const odds = 0.45 + 0.45 * this.ramp(d)
       if (hash(this.seed, n * 7 + 2) < odds) {
