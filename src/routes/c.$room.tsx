@@ -57,6 +57,10 @@ const PITCH_RANGE = 16
 // The drag distance (px) for full steering.
 const DRAG_RANGE = 90
 
+// How the player steers: motion sensors, or a thumb on the screen.
+type Control = "tilt" | "touch"
+const CONTROL_KEY = "canyon-run:control"
+
 type Run = { distance: number }
 type Submit = "idle" | "sending" | "saved" | "skipped" | { error: string }
 
@@ -95,6 +99,11 @@ function Controller({ room }: { room: string }) {
   const [state, setState] = useState<GameState | null>(null)
   const [readySent, setReadySent] = useState(false)
   const [dragMode, setDragMode] = useState(false)
+  const [control, setControl] = useState<Control>(() =>
+    stored(CONTROL_KEY, () => "") === "touch" ? "touch" : "tilt"
+  )
+  // Set once tilt failed: no permission, or no sensor readings.
+  const [noSensor, setNoSensor] = useState(false)
   const [run, setRun] = useState<Run | null>(null)
   const [submit, setSubmit] = useState<Submit>("idle")
   const [name, setName] = useState(() => stored(NAME_KEY, () => ""))
@@ -194,27 +203,68 @@ function Controller({ room }: { room: string }) {
     return () => clearInterval(timer)
   }, [flying, dragMode])
 
+  const pickControl = (next: Control) => {
+    setControl(next)
+    remember(CONTROL_KEY, next)
+  }
+
   const launch = useCallback(async () => {
-    // iOS asks for permission, and only from a tap.
-    const request = (
-      DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> }
-    ).requestPermission
-    let allowed = true
-    if (typeof request === "function") {
-      allowed = await request().then((answer) => answer === "granted").catch(() => false)
+    const touch = control === "touch" || noSensor
+    let allowed = !touch
+    if (!touch) {
+      const api =
+        typeof DeviceOrientationEvent === "undefined"
+          ? null
+          : (DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> })
+      if (!api) allowed = false
+      // iOS asks for permission, and only from a tap.
+      else if (typeof api.requestPermission === "function") {
+        allowed = await api
+          .requestPermission()
+          .then((answer) => answer === "granted")
+          .catch(() => false)
+      }
+      if (!allowed) setNoSensor(true)
     }
     // Where the phone is now is "straight ahead".
     neutral.current = sensor.current
     setDragMode(!allowed)
     if (allowed) {
       setTimeout(() => {
-        if (!sensor.current) setDragMode(true)
+        if (sensor.current) return
+        setDragMode(true)
+        setNoSensor(true)
       }, SENSOR_TIMEOUT_MS)
     }
     setRun(null)
     setReadySent(true)
     socket.current?.send({ t: "ready" })
-  }, [])
+  }, [control, noSensor])
+
+  const picker = (
+    <div className="pad-switch" role="radiogroup" aria-label="Steering">
+      {(["tilt", "touch"] as const).map((key) => {
+        const on = key === "tilt" ? control === "tilt" && !noSensor : control === "touch" || noSensor
+        return (
+          <button
+            key={key}
+            role="radio"
+            aria-checked={on}
+            className={on ? "is-on" : ""}
+            disabled={key === "tilt" && noSensor}
+            onClick={() => pickControl(key)}
+          >
+            {key === "tilt" ? "Tilt" : "Touch"}
+          </button>
+        )
+      })}
+    </div>
+  )
+  const pickerHint = noSensor
+    ? "Motion sensors are off on this phone: steer with your thumb."
+    : control === "tilt"
+      ? "Hold your phone the way that feels straight ahead, then tap."
+      : "Hold anywhere on the screen and slide your thumb to steer."
 
   const save = () => {
     const trimmed = name.trim().slice(0, NAME_MAX)
@@ -366,6 +416,7 @@ function Controller({ room }: { room: string }) {
           )}
         </div>
         <footer className="pad-foot">
+          {picker}
           <button className="primary" onClick={() => void launch()}>
             Launch again
           </button>
@@ -404,10 +455,12 @@ function Controller({ room }: { room: string }) {
         </div>
       </div>
       <footer className="pad-foot">
+        <p className="pad-label">Steer by</p>
+        {picker}
+        <p className="pad-hint">{pickerHint}</p>
         <button className="primary" onClick={() => void launch()}>
           Launch
         </button>
-        <p className="pad-hint">Hold your phone the way that feels straight ahead, then tap.</p>
       </footer>
     </Shell>
   )

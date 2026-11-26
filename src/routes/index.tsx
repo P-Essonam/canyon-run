@@ -168,7 +168,7 @@ function Screen() {
             <div className={`qr-card ${tab === "play" ? "" : "is-hidden"}`} aria-hidden={tab !== "play"}>
               <div className="qr" dangerouslySetInnerHTML={{ __html: qr }} />
               <p className="scan">Scan to fly</p>
-              <p className="muted">Tilt your phone to steer</p>
+              <p className="muted">Tilt your phone or slide your thumb to steer</p>
               <div className="seats" role="radiogroup" aria-label="Players">
                 {[1, 2].map((n) => (
                   <button

@@ -834,3 +834,37 @@ button {
     height: 160px;
   }
 }
+
+/* Tilt or Touch, on the phone. */
+.pad-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  width: 100%;
+  max-width: 340px;
+  padding: 4px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.pad-switch button {
+  height: 40px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--soft);
+  font-size: 15px;
+  font-weight: 500;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.pad-switch button.is-on {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fafafa;
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+.pad-switch button:disabled {
+  opacity: 0.35;
+}
