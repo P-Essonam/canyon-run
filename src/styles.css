@@ -92,14 +92,6 @@ button {
   text-shadow: 0 4px 0 var(--rock), 0 10px 40px rgba(120, 30, 20, 0.6);
 }
 
-.lobby-row {
-  display: flex;
-  gap: 24px;
-  align-items: stretch;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
 .qr-card {
   width: 300px;
   display: flex;
@@ -188,19 +180,69 @@ button {
   opacity: 0.7;
 }
 
-.board {
-  width: 420px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+.lobby-card {
+  width: 340px;
+  padding: 8px 8px 20px;
 }
 
-.board h3 {
-  margin: 0 0 10px;
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 18px;
+  border-radius: 14px;
+  background: rgba(26, 16, 48, 0.08);
+}
+
+.tabs button {
+  height: 40px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 700;
   font-size: 15px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--rock);
+  opacity: 0.55;
+}
+
+.tabs button.is-on {
+  background: #fff;
+  opacity: 1;
+  box-shadow: 0 1px 3px rgba(26, 16, 48, 0.18);
+}
+
+.lobby-card .qr-card {
+  width: auto;
+  padding: 0 12px;
+}
+
+.panels {
+  display: grid;
+}
+
+.panels > * {
+  grid-area: 1 / 1;
+}
+
+.panels > .is-hidden {
+  visibility: hidden;
+}
+
+.board {
+  display: grid;
+  gap: 14px;
+  padding: 0 12px;
+  align-content: start;
+}
+
+.board .seats {
+  margin-top: 0;
+}
+
+.board-empty {
+  text-align: center;
+  padding: 40px 0;
 }
 
 .board ol {
@@ -213,8 +255,10 @@ button {
 
 .board li {
   display: flex;
-  gap: 8px;
-  font-size: 15px;
+  gap: 10px;
+  font-size: 16px;
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(26, 16, 48, 0.07);
 }
 
 .rank {
@@ -788,8 +832,5 @@ button {
   .qr {
     width: 160px;
     height: 160px;
-  }
-  .qr-card {
-    padding: 18px;
   }
 }

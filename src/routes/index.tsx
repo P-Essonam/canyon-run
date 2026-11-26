@@ -58,6 +58,7 @@ function Screen() {
   const [state, setState] = useState<GameState | null>(null)
   const [muted, setMuted] = useState(true)
   const [volume, setVolume] = useState(0.7)
+  const [tab, setTab] = useState<"play" | "board">("play")
   const [qr, setQr] = useState("")
   const [board, setBoard] = useState<Leaderboard>({ allTime: [], today: [] })
   const sound = useRef<Sound | null>(null)
@@ -147,8 +148,24 @@ function Screen() {
       {phase === "lobby" && (
         <div className="lobby">
           <h1 className="title">Canyon Run</h1>
-          <div className="lobby-row">
-            <div className="card qr-card">
+          <div className="card lobby-card">
+            <div className="tabs" role="tablist">
+              {(["play", "board"] as const).map((key) => (
+                <button
+                  key={key}
+                  role="tab"
+                  aria-selected={tab === key}
+                  className={tab === key ? "is-on" : ""}
+                  onClick={() => setTab(key)}
+                >
+                  {key === "play" ? "Play" : "Leaderboard"}
+                </button>
+              ))}
+            </div>
+            {/* Both panels share one cell, so the card keeps its size. */}
+            <div className="panels">
+              <Board board={board} hidden={tab !== "board"} />
+            <div className={`qr-card ${tab === "play" ? "" : "is-hidden"}`} aria-hidden={tab !== "play"}>
               <div className="qr" dangerouslySetInnerHTML={{ __html: qr }} />
               <p className="scan">Scan to fly</p>
               <p className="muted">Tilt your phone to steer</p>
@@ -192,7 +209,7 @@ function Screen() {
                 })}
               </div>
             </div>
-            <Board board={board} />
+            </div>
           </div>
         </div>
       )}
@@ -267,27 +284,37 @@ function Screen() {
   )
 }
 
-function Board({ board }: { board: Leaderboard }) {
+function Board({ board, hidden }: { board: Leaderboard; hidden: boolean }) {
+  const [range, setRange] = useState<"today" | "allTime">("today")
+  const entries = board[range]
   return (
-    <div className="card board">
-      {(["today", "allTime"] as const).map((key) => (
-        <div key={key} className="board-col">
-          <h3>{key === "today" ? "Today" : "All time"}</h3>
-          {board[key].length === 0 ? (
-            <p className="muted">No runs yet. Be the first!</p>
-          ) : (
-            <ol>
-              {board[key].map((entry, index) => (
-                <li key={index}>
-                  <span className="rank">{index + 1}</span>
-                  <span className="name">{entry.name}</span>
-                  <span className="dist">{entry.distance} m</span>
-                </li>
-              ))}
-            </ol>
-          )}
-        </div>
-      ))}
+    <div className={`board ${hidden ? "is-hidden" : ""}`} aria-hidden={hidden}>
+      <div className="seats" role="radiogroup" aria-label="Range">
+        {(["today", "allTime"] as const).map((key) => (
+          <button
+            key={key}
+            role="radio"
+            aria-checked={range === key}
+            className={range === key ? "is-on" : ""}
+            onClick={() => setRange(key)}
+          >
+            {key === "today" ? "Today" : "All time"}
+          </button>
+        ))}
+      </div>
+      {entries.length === 0 ? (
+        <p className="muted board-empty">No runs yet. Be the first!</p>
+      ) : (
+        <ol>
+          {entries.map((entry, index) => (
+            <li key={index}>
+              <span className="rank">{index + 1}</span>
+              <span className="name">{entry.name}</span>
+              <span className="dist">{entry.distance} m</span>
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   )
 }
