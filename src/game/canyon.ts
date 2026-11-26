@@ -105,10 +105,10 @@ export class Canyon {
   }
 
   // How far the rocket at (x, y), distance d, is from hitting anything
-  // (negative: it hit). The side walls don't count: the rocket slides
-  // along them (see clampX).
+  // (negative: it hit). Only pillars and arches count: the rocket slides
+  // along the side walls and the floor (see clampX and clampY).
   clearance(d: number, x: number, y: number): number {
-    let clear = y - FLOOR
+    let clear = Infinity
     for (const obstacle of this.obstaclesBetween(d - 6, d + 6)) {
       if (obstacle.kind === "pillar") {
         const dz = obstacle.d - d
@@ -119,6 +119,11 @@ export class Canyon {
       }
     }
     return clear - ROCKET_RADIUS
+  }
+
+  // Keeps the rocket off the floor and under the ceiling.
+  clampY(y: number) {
+    return Math.max(FLOOR + ROCKET_RADIUS, Math.min(CEILING, y))
   }
 
   // Keeps the rocket between the side walls.
