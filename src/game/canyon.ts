@@ -41,7 +41,7 @@ const KINDS: Array<{ kind: ObstacleKind; from: number; weight: number }> = [
   { kind: "arch", from: 0, weight: 2 },
   { kind: "ridge", from: 600, weight: 2 },
   { kind: "blade", from: 900, weight: 2.5 },
-  { kind: "gate", from: 1300, weight: 2 },
+  { kind: "gate", from: 10_000, weight: 2 },
 ]
 
 // The kinds of obstacles met at distance d.
