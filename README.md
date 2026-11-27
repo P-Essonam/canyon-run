@@ -12,7 +12,7 @@ Canyon Run runs entirely on Cloudflare:
 - A Durable Object for each room relays messages between the screen and the phones over WebSockets.
 - A D1 database stores the leaderboard. The table is created on the first request, so there are no migrations to run.
 
-The quickest way to deploy it is [Conic](https://useconic.dev/?ref=canyon-run): import this repository and Conic creates the Worker, the Durable Object and the D1 database for you.
+The quickest way to deploy it is the [Canyon Run template on Conic](https://useconic.dev/templates/canyon-run?ref=canyon-run): choose **Deploy now** and Conic creates the Worker, the Durable Object and the D1 database on your Cloudflare account, with nothing to fork. When this repository gets a new version, your project shows **New version available**, and nothing changes until you choose **Update**.
 
 To deploy it yourself with Wrangler:
 
