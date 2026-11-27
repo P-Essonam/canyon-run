@@ -3,6 +3,11 @@
 export const SITE_URL = "https://canyon.useconic.dev"
 export const SITE_NAME = "Canyon Run"
 
+// Visits are counted with Clics, on SITE_URL (and on localhost) only, so a
+// copy deployed elsewhere never reports to this project. Put your own
+// project id here, or empty it to turn the tracker off.
+export const CLICS_PROJECT_ID = "j97cgr1dzmqt93qypfyh7vgjqs8k14wa"
+
 const TITLE = "Canyon Run – Fly a rocket with your phone · Powered by Conic"
 const DESCRIPTION =
   "A 3D canyon run on your computer, steered by tilting your phone. Scan the code, fly as far as you can and top the leaderboard. Free, in the browser."

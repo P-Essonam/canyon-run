@@ -1,7 +1,8 @@
 import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router"
+import { useEffect } from "react"
 import type { ReactNode } from "react"
 import css from "../styles.css?url"
-import { seo } from "../shared/site"
+import { CLICS_PROJECT_ID, SITE_URL, seo } from "../shared/site"
 
 export const Route = createRootRoute({
   head: () => {
@@ -38,8 +39,26 @@ function Shell({ children }: { children: ReactNode }) {
       </head>
       <body>
         {children}
+        <Analytics />
         <Scripts />
       </body>
     </html>
   )
+}
+
+// The Clics tracker, loaded only on the game's own domain and on localhost.
+function Analytics() {
+  useEffect(() => {
+    if (!CLICS_PROJECT_ID) return
+    const host = window.location.hostname
+    const local = host === "localhost" || host === "127.0.0.1"
+    if (!local && host !== new URL(SITE_URL).hostname) return
+    const script = document.createElement("script")
+    script.defer = true
+    script.src = "https://clics.dev/tracker.js"
+    script.dataset.projectId = CLICS_PROJECT_ID
+    script.dataset.allowLocalhost = ""
+    document.head.appendChild(script)
+  }, [])
+  return null
 }
